@@ -106,6 +106,80 @@ Abre tu navegador en: `http://localhost:3000` (o el puerto que hayas configurado
 
 2. **Reinicia Claude Desktop** para cargar la configuración.
 
+### Configuración en Visual Studio Code
+
+Para usar este servidor MCP con GitHub Copilot en VS Code:
+
+1. **Instala la extensión de GitHub Copilot** (si no la tienes):
+   - Abre VS Code
+   - Ve a Extensions (Ctrl+Shift+X)
+   - Busca "GitHub Copilot" e instálala
+
+2. **Configura el servidor MCP**:
+   - Abre la paleta de comandos (Ctrl+Shift+P / Cmd+Shift+P)
+   - Escribe "Preferences: Open User Settings (JSON)"
+   - Agrega la configuración del servidor MCP:
+
+   ```json
+   {
+     "github.copilot.chat.mcp.servers": {
+       "testing-tracker": {
+         "command": "node",
+         "args": ["c:\\ruta\\completa\\al\\proyecto\\src\\mcp-server.js"],
+         "env": {}
+       }
+     }
+   }
+   ```
+
+   **Nota para Windows**: Usa doble backslash (`\\`) o forward slash (`/`) en las rutas.
+
+3. **Verifica la conexión**:
+   - Abre GitHub Copilot Chat en VS Code
+   - El servidor debería aparecer en la lista de herramientas disponibles
+   - Puedes verificar escribiendo algo como: "List all available testing tools"
+
+4. **Ejemplo de configuración completa para Windows**:
+   ```json
+   {
+     "github.copilot.chat.mcp.servers": {
+       "testing-tracker": {
+         "command": "node",
+         "args": ["C:\\Users\\usuario\\Documents\\mcp-testing-server\\src\\mcp-server.js"],
+         "env": {}
+       }
+     }
+   }
+   ```
+
+5. **Ejemplo de configuración completa para Linux/Mac**:
+   ```json
+   {
+     "github.copilot.chat.mcp.servers": {
+       "testing-tracker": {
+         "command": "node",
+         "args": ["/home/usuario/mcp-testing-server/src/mcp-server.js"],
+         "env": {}
+       }
+     }
+   }
+   ```
+
+6. **Reinicia VS Code** para aplicar los cambios.
+
+### Uso en VS Code con GitHub Copilot
+
+Una vez configurado, puedes usar el servidor MCP directamente en el chat de Copilot:
+
+```
+"Crea una suite de testing para mi API"
+"Agrega casos de prueba para el login"
+"Muéstrame el estado de todas mis suites"
+"Marca el caso 5 como passed"
+```
+
+GitHub Copilot automáticamente detectará y usará las herramientas del servidor MCP cuando sea apropiado.
+
 ### Herramientas MCP Disponibles
 
 #### **create_test_suite**
