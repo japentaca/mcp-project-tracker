@@ -304,7 +304,7 @@ class MCPServer {
   // Tool implementations
   async createTestSuite(args) {
     const { name, project, description } = args;
-    
+
     // Validate inputs
     this.validateString(name, 'Name', true);
     this.validateString(project, 'Project', false);
@@ -320,7 +320,7 @@ class MCPServer {
 
   async listTestSuites(args) {
     const { project } = args;
-    
+
     // Validate inputs
     this.validateString(project, 'Project', false);
 
