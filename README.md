@@ -1,19 +1,20 @@
-# MCP Testing Tracker
+# MCP Project Tracker
 
-Un servidor MCP (Model Context Protocol) para gestionar checklists de procesos de testing con persistencia en SQLite y una interfaz web simple para visualización y edición.
+Un servidor MCP (Model Context Protocol) para gestionar proyectos y tareas con persistencia en SQLite y una interfaz web simple para visualización y edición.
 
 ## 🚀 Características
 
-- **Servidor MCP**: Expone herramientas de testing via protocolo stdio
+- **Servidor MCP**: Expone herramientas de seguimiento de proyectos via protocolo stdio
 - **Base de datos SQLite**: Persistencia de datos ligera y confiable
 - **API REST**: Endpoints para gestión completa de suites y casos de prueba
 - **Interfaz Web**: UI responsive con HTML/CSS/JavaScript vanilla
-- **Gestión completa**: Crear, editar, filtrar y hacer seguimiento de casos de prueba
-- **Estados de prueba**: pending, passed, failed, blocked, skipped
+- **Gestión completa**: Crear, editar, filtrar y hacer seguimiento de tareas
+- **Estados de tareas**: pending, in-progress, developed, tested, deployed, blocked
 - **Prioridades**: low, medium, high, critical
-- **Categorización**: Organiza casos por categorías personalizadas
-- **Búsqueda y filtros**: Encuentra casos específicos rápidamente
-- **Estadísticas en tiempo real**: Seguimiento del progreso de testing
+- **Categorización**: Organiza tareas por categorías personalizadas
+- **Asignación**: Responsable (`assignee`) y fecha límite (`due_date`)
+- **Búsqueda y filtros**: Encuentra tareas específicas rápidamente
+- **Estadísticas en tiempo real**: Seguimiento del progreso del proyecto
 
 ## 📁 Estructura del Proyecto
 

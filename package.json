@@ -1,7 +1,7 @@
 {
-  "name": "mcp-testing-server",
+  "name": "mcp-project-tracker",
   "version": "1.0.0",
-  "description": "MCP server for managing testing checklists with SQLite persistence and web interface",
+  "description": "MCP server for managing project and task tracking with SQLite persistence and web interface",
   "main": "src/mcp-server.js",
   "type": "module",
   "scripts": {
@@ -11,7 +11,8 @@
     "start:web:8080": "node src/web-server.js 8080",
     "dev": "concurrently \"npm run start:mcp\" \"npm run start:web\"",
     "dev:3001": "concurrently \"npm run start:mcp\" \"npm run start:web:3001\"",
-    "test": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js"
+    "test": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:mcp": "node scripts/mcp-smoke-test.js"
   },
   "jest": {
     "testEnvironment": "node",
@@ -19,8 +20,8 @@
   },
   "keywords": [
     "mcp",
-    "testing",
-    "checklist",
+    "project-tracking",
+    "tasks",
     "sqlite",
     "model-context-protocol"
   ],

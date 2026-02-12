@@ -67,7 +67,7 @@ class MCPServer {
           tools: {}
         },
         serverInfo: {
-          name: 'mcp-testing-server',
+          name: 'mcp-project-tracker',
           version: '1.0.0'
         }
       }
@@ -77,78 +77,84 @@ class MCPServer {
   handleToolsList(id) {
     const tools = [
       {
-        name: 'create_test_suite',
-        description: 'Create a new test suite',
+        name: 'create_project',
+        description: 'Create a new project',
         inputSchema: {
           type: 'object',
           properties: {
-            name: { type: 'string', description: 'Name of the test suite' },
-            project: { type: 'string', description: 'Project name (optional)' },
-            description: { type: 'string', description: 'Suite description (optional)' }
+            name: { type: 'string', description: 'Project name' },
+            client: { type: 'string', description: 'Client name (optional)' },
+            description: { type: 'string', description: 'Project description (optional)' }
           },
           required: ['name']
         }
       },
       {
-        name: 'list_test_suites',
-        description: 'List all test suites with metadata and counts',
+        name: 'list_projects',
+        description: 'List all projects with metadata and counts',
         inputSchema: {
           type: 'object',
           properties: {
-            project: { type: 'string', description: 'Filter by project name (optional)' }
+            client: { type: 'string', description: 'Filter by client name (optional)' }
           }
         }
       },
       {
-        name: 'add_test_case',
-        description: 'Add a new test case to a suite',
+        name: 'add_task',
+        description: 'Add a new task to a project',
         inputSchema: {
           type: 'object',
           properties: {
-            suite_id: { type: 'number', description: 'ID of the test suite' },
-            description: { type: 'string', description: 'Test case description' },
+            project_id: { type: 'number', description: 'ID of the project' },
+            description: { type: 'string', description: 'Task description' },
             priority: {
               type: 'string',
               enum: ['low', 'medium', 'high', 'critical'],
-              description: 'Test case priority'
+              description: 'Task priority'
             },
-            category: { type: 'string', description: 'Test case category (optional)' }
+            category: { type: 'string', description: 'Task category (optional)' },
+            assignee: { type: 'string', description: 'Task assignee (optional)' },
+            due_date: { type: 'string', description: 'Due date (YYYY-MM-DD, optional)' }
           },
-          required: ['suite_id', 'description']
+          required: ['project_id', 'description']
         }
       },
       {
-        name: 'update_test_case',
-        description: 'Update an existing test case',
+        name: 'update_task',
+        description: 'Update an existing task',
         inputSchema: {
           type: 'object',
           properties: {
-            id: { type: 'number', description: 'Test case ID' },
+            id: { type: 'number', description: 'Task ID' },
             status: {
               type: 'string',
-              enum: ['pending', 'passed', 'failed', 'blocked', 'skipped'],
-              description: 'Test case status'
+              enum: ['pending', 'in-progress', 'developed', 'tested', 'deployed', 'blocked'],
+              description: 'Task status'
             },
-            notes: { type: 'string', description: 'Test case notes (optional)' },
+            notes: { type: 'string', description: 'Task notes (optional)' },
             priority: {
               type: 'string',
               enum: ['low', 'medium', 'high', 'critical'],
-              description: 'Test case priority (optional)'
-            }
+              description: 'Task priority (optional)'
+            },
+            category: { type: 'string', description: 'Task category (optional)' },
+            description: { type: 'string', description: 'Task description (optional)' },
+            assignee: { type: 'string', description: 'Task assignee (optional)' },
+            due_date: { type: 'string', description: 'Due date (YYYY-MM-DD, optional)' }
           },
           required: ['id']
         }
       },
       {
-        name: 'get_test_cases',
-        description: 'Get filtered test cases',
+        name: 'get_tasks',
+        description: 'Get filtered tasks',
         inputSchema: {
           type: 'object',
           properties: {
-            suite_id: { type: 'number', description: 'Filter by suite ID (optional)' },
+            project_id: { type: 'number', description: 'Filter by project ID (optional)' },
             status: {
               type: 'string',
-              enum: ['pending', 'passed', 'failed', 'blocked', 'skipped'],
+              enum: ['pending', 'in-progress', 'developed', 'tested', 'deployed', 'blocked'],
               description: 'Filter by status (optional)'
             },
             priority: {
@@ -157,39 +163,40 @@ class MCPServer {
               description: 'Filter by priority (optional)'
             },
             category: { type: 'string', description: 'Filter by category (optional)' },
+            assignee: { type: 'string', description: 'Filter by assignee (optional)' },
             search: { type: 'string', description: 'Search in description and notes (optional)' }
           }
         }
       },
       {
-        name: 'get_test_summary',
-        description: 'Get test summary statistics for a suite',
+        name: 'get_project_summary',
+        description: 'Get summary statistics for a project',
         inputSchema: {
           type: 'object',
           properties: {
-            suite_id: { type: 'number', description: 'Test suite ID' }
+            project_id: { type: 'number', description: 'Project ID' }
           },
-          required: ['suite_id']
+          required: ['project_id']
         }
       },
       {
-        name: 'delete_test_case',
-        description: 'Delete a test case',
+        name: 'delete_task',
+        description: 'Delete a task',
         inputSchema: {
           type: 'object',
           properties: {
-            id: { type: 'number', description: 'Test case ID to delete' }
+            id: { type: 'number', description: 'Task ID to delete' }
           },
           required: ['id']
         }
       },
       {
-        name: 'delete_test_suite',
-        description: 'Delete a test suite and all its test cases',
+        name: 'delete_project',
+        description: 'Delete a project and all its tasks',
         inputSchema: {
           type: 'object',
           properties: {
-            id: { type: 'number', description: 'Test suite ID to delete' }
+            id: { type: 'number', description: 'Project ID to delete' }
           },
           required: ['id']
         }
@@ -210,36 +217,36 @@ class MCPServer {
       let result;
 
       switch (name) {
-        case 'create_test_suite':
-          result = await this.createTestSuite(args);
+        case 'create_project':
+          result = await this.createProject(args);
           break;
 
-        case 'list_test_suites':
-          result = await this.listTestSuites(args);
+        case 'list_projects':
+          result = await this.listProjects(args);
           break;
 
-        case 'add_test_case':
-          result = await this.addTestCase(args);
+        case 'add_task':
+          result = await this.addTask(args);
           break;
 
-        case 'update_test_case':
-          result = await this.updateTestCase(args);
+        case 'update_task':
+          result = await this.updateTask(args);
           break;
 
-        case 'get_test_cases':
-          result = await this.getTestCases(args);
+        case 'get_tasks':
+          result = await this.getTasks(args);
           break;
 
-        case 'get_test_summary':
-          result = await this.getTestSummary(args);
+        case 'get_project_summary':
+          result = await this.getProjectSummary(args);
           break;
 
-        case 'delete_test_case':
-          result = await this.deleteTestCase(args);
+        case 'delete_task':
+          result = await this.deleteTask(args);
           break;
 
-        case 'delete_test_suite':
-          result = await this.deleteTestSuite(args);
+        case 'delete_project':
+          result = await this.deleteProject(args);
           break;
 
         default:
@@ -273,7 +280,7 @@ class MCPServer {
 
   // Input validation helpers
   validateStatus(status) {
-    const validStatuses = ['pending', 'passed', 'failed', 'blocked', 'skipped'];
+    const validStatuses = ['pending', 'in-progress', 'developed', 'tested', 'deployed', 'blocked'];
     if (status && !validStatuses.includes(status)) {
       throw new Error(`Invalid status: ${status}. Must be one of: ${validStatuses.join(', ')}`);
     }
@@ -302,57 +309,59 @@ class MCPServer {
   }
 
   // Tool implementations
-  async createTestSuite(args) {
-    const { name, project, description } = args;
+  async createProject(args) {
+    const { name, client, description } = args;
 
     // Validate inputs
     this.validateString(name, 'Name', true);
-    this.validateString(project, 'Project', false);
+    this.validateString(client, 'Client', false);
     this.validateString(description, 'Description', false);
 
-    const id = await this.db.createTestSuite(name, project, description);
+    const id = await this.db.createProject(name, client, description);
     return {
       success: true,
-      suite_id: id,
-      message: `Test suite "${name}" created with ID ${id}`
+      project_id: id,
+      message: `Project "${name}" created with ID ${id}`
     };
   }
 
-  async listTestSuites(args) {
-    const { project } = args;
+  async listProjects(args) {
+    const { client } = args;
 
     // Validate inputs
-    this.validateString(project, 'Project', false);
+    this.validateString(client, 'Client', false);
 
-    const suites = await this.db.getTestSuites(project);
-    return { suites };
+    const projects = await this.db.getProjects(client);
+    return { projects };
   }
 
-  async addTestCase(args) {
-    const { suite_id, description, priority = 'medium', category } = args;
+  async addTask(args) {
+    const { project_id, description, priority = 'medium', category, assignee, due_date } = args;
 
     // Validate inputs
-    this.validateId(suite_id, 'Suite ID');
+    this.validateId(project_id, 'Project ID');
     this.validateString(description, 'Description', true);
     this.validatePriority(priority);
     this.validateString(category, 'Category', false);
+    this.validateString(assignee, 'Assignee', false);
+    this.validateString(due_date, 'Due date', false);
 
-    // Verify suite exists
-    const suite = await this.db.getTestSuite(suite_id);
-    if (!suite) {
-      throw new Error(`Test suite with ID ${suite_id} not found`);
+    // Verify project exists
+    const project = await this.db.getProject(project_id);
+    if (!project) {
+      throw new Error(`Project with ID ${project_id} not found`);
     }
 
-    const id = await this.db.addTestCase(suite_id, description, priority, category);
+    const id = await this.db.addTask(project_id, description, priority, category, assignee, due_date);
     return {
       success: true,
-      case_id: id,
-      message: `Test case added with ID ${id} to suite "${suite.name}"`
+      task_id: id,
+      message: `Task added with ID ${id} to project "${project.name}"`
     };
   }
 
-  async updateTestCase(args) {
-    const { id, status, notes, priority, category, description } = args;
+  async updateTask(args) {
+    const { id, status, notes, priority, category, description, assignee, due_date } = args;
 
     // Validate inputs
     this.validateId(id, 'Case ID');
@@ -361,6 +370,8 @@ class MCPServer {
     this.validateString(notes, 'Notes', false);
     this.validateString(category, 'Category', false);
     this.validateString(description, 'Description', false);
+    this.validateString(assignee, 'Assignee', false);
+    this.validateString(due_date, 'Due date', false);
 
     const updates = {};
     if (status !== undefined) updates.status = status;
@@ -368,87 +379,90 @@ class MCPServer {
     if (priority !== undefined) updates.priority = priority;
     if (category !== undefined) updates.category = category;
     if (description !== undefined) updates.description = description;
+    if (assignee !== undefined) updates.assignee = assignee;
+    if (due_date !== undefined) updates.due_date = due_date;
 
-    const success = await this.db.updateTestCase(id, updates);
+    const success = await this.db.updateTask(id, updates);
 
     if (!success) {
-      throw new Error(`Test case with ID ${id} not found`);
+      throw new Error(`Task with ID ${id} not found`);
     }
 
     return {
       success: true,
-      message: `Test case ${id} updated successfully`
+      message: `Task ${id} updated successfully`
     };
   }
 
-  async getTestCases(args) {
-    const { suite_id, status, priority, category, search } = args;
+  async getTasks(args) {
+    const { project_id, status, priority, category, assignee, search } = args;
 
     // Validate inputs
-    if (suite_id !== undefined) this.validateId(suite_id, 'Suite ID');
+    if (project_id !== undefined) this.validateId(project_id, 'Project ID');
     this.validateStatus(status);
     this.validatePriority(priority);
     this.validateString(category, 'Category', false);
+    this.validateString(assignee, 'Assignee', false);
     this.validateString(search, 'Search', false);
 
-    const cases = await this.db.getTestCases(args);
-    return { test_cases: cases };
+    const tasks = await this.db.getTasks(args);
+    return { tasks };
   }
 
-  async getTestSummary(args) {
-    const { suite_id } = args;
+  async getProjectSummary(args) {
+    const { project_id } = args;
 
     // Validate inputs
-    this.validateId(suite_id, 'Suite ID');
+    this.validateId(project_id, 'Project ID');
 
-    // Verify suite exists
-    const suite = await this.db.getTestSuite(suite_id);
-    if (!suite) {
-      throw new Error(`Test suite with ID ${suite_id} not found`);
+    // Verify project exists
+    const project = await this.db.getProject(project_id);
+    if (!project) {
+      throw new Error(`Project with ID ${project_id} not found`);
     }
 
-    const summary = await this.db.getTestSummary(suite_id);
+    const summary = await this.db.getProjectSummary(project_id);
     return {
-      suite_name: suite.name,
-      suite_id: suite_id,
+      project_name: project.name,
+      project_id,
       summary
     };
   }
 
-  async deleteTestCase(args) {
+  async deleteTask(args) {
     const { id } = args;
 
     // Validate inputs
-    this.validateId(id, 'Case ID');
+    this.validateId(id, 'Task ID');
 
-    const success = await this.db.deleteTestCase(id);
+    const success = await this.db.deleteTask(id);
 
     if (!success) {
-      throw new Error(`Test case with ID ${id} not found`);
+      throw new Error(`Task with ID ${id} not found`);
     }
 
     return {
       success: true,
-      message: `Test case ${id} deleted successfully`
+      message: `Task ${id} deleted successfully`
     };
   }
 
-  async deleteTestSuite(args) {
+  async deleteProject(args) {
     const { id } = args;
 
     // Validate inputs
-    this.validateId(id, 'Suite ID');
+    this.validateId(id, 'Project ID');
 
-    // Verify suite exists
-    const suite = await this.db.getTestSuite(id);
-    if (!suite) {
-      throw new Error(`Test suite with ID ${id} not found`);
+    // Verify project exists
+    const project = await this.db.getProject(id);
+    if (!project) {
+      throw new Error(`Project with ID ${id} not found`);
     }
 
-    const success = await this.db.deleteTestSuite(id);
+    const success = await this.db.deleteProject(id);
     return {
       success: true,
-      message: `Test suite "${suite.name}" and all its test cases deleted successfully`
+      message: `Project "${project.name}" and all its tasks deleted successfully`
     };
   }
 
@@ -490,4 +504,4 @@ process.on('SIGTERM', async () => {
 
 // Start the MCP server
 server = new MCPServer();
-console.error('MCP Testing Server started');
+console.error('MCP Project Tracker Server started');

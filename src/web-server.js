@@ -73,46 +73,46 @@ class WebServer {
 
     // API Routes
 
-    // Test Suites
-    this.app.get('/api/suites', async (req, res) => {
+    // Projects
+    this.app.get('/api/projects', async (req, res) => {
       try {
-        const { project } = req.query;
-        const suites = await this.db.getTestSuites(project);
-        res.json(suites);
+        const { client } = req.query;
+        const projects = await this.db.getProjects(client);
+        res.json(projects);
       } catch (error) {
         res.status(500).json({ error: error.message });
       }
     });
 
-    this.app.post('/api/suites', async (req, res) => {
+    this.app.post('/api/projects', async (req, res) => {
       try {
-        const { name, project, description } = req.body;
+        const { name, client, description } = req.body;
 
         if (!name) {
           return res.status(400).json({ error: 'Name is required' });
         }
 
-        const id = await this.db.createTestSuite(name, project, description);
+        const id = await this.db.createProject(name, client, description);
         res.status(201).json({
           success: true,
           id,
-          message: `Test suite "${name}" created successfully`
+          message: `Project "${name}" created successfully`
         });
       } catch (error) {
         res.status(500).json({ error: error.message });
       }
     });
 
-    this.app.put('/api/suites/:id', async (req, res) => {
+    this.app.put('/api/projects/:id', async (req, res) => {
       try {
         const id = parseInt(req.params.id);
 
         if (isNaN(id)) {
-          return res.status(400).json({ error: 'Invalid suite ID' });
+          return res.status(400).json({ error: 'Invalid project ID' });
         }
 
         const updates = {};
-        const allowedFields = ['name', 'project', 'description'];
+        const allowedFields = ['name', 'client', 'description'];
 
         for (const field of allowedFields) {
           if (req.body[field] !== undefined) {
@@ -124,102 +124,103 @@ class WebServer {
           return res.status(400).json({ error: 'No valid fields to update' });
         }
 
-        const success = await this.db.updateTestSuite(id, updates);
+        const success = await this.db.updateProject(id, updates);
         if (success) {
           res.json({
             success: true,
-            message: 'Test suite updated successfully'
+            message: 'Project updated successfully'
           });
         } else {
-          res.status(404).json({ error: 'Test suite not found' });
+          res.status(404).json({ error: 'Project not found' });
         }
       } catch (error) {
         res.status(500).json({ error: error.message });
       }
     });
 
-    this.app.delete('/api/suites/:id', async (req, res) => {
+    this.app.delete('/api/projects/:id', async (req, res) => {
       try {
         const id = parseInt(req.params.id);
 
         if (isNaN(id)) {
-          return res.status(400).json({ error: 'Invalid suite ID' });
+          return res.status(400).json({ error: 'Invalid project ID' });
         }
 
-        // Get suite info before deletion
-        const suite = await this.db.getTestSuite(id);
-        if (!suite) {
-          return res.status(404).json({ error: 'Test suite not found' });
+        // Get project info before deletion
+        const project = await this.db.getProject(id);
+        if (!project) {
+          return res.status(404).json({ error: 'Project not found' });
         }
 
-        const success = await this.db.deleteTestSuite(id);
+        const success = await this.db.deleteProject(id);
         if (success) {
           res.json({
             success: true,
-            message: `Test suite "${suite.name}" deleted successfully`
+            message: `Project "${project.name}" deleted successfully`
           });
         } else {
-          res.status(404).json({ error: 'Test suite not found' });
+          res.status(404).json({ error: 'Project not found' });
         }
       } catch (error) {
         res.status(500).json({ error: error.message });
       }
     });
 
-    // Test Cases
-    this.app.get('/api/cases', async (req, res) => {
+    // Tasks
+    this.app.get('/api/tasks', async (req, res) => {
       try {
         const filters = {};
 
         // Parse query parameters
-        if (req.query.suite_id) filters.suite_id = parseInt(req.query.suite_id);
+        if (req.query.project_id) filters.project_id = parseInt(req.query.project_id);
         if (req.query.status) filters.status = req.query.status;
         if (req.query.priority) filters.priority = req.query.priority;
         if (req.query.category) filters.category = req.query.category;
+        if (req.query.assignee) filters.assignee = req.query.assignee;
         if (req.query.search) filters.search = req.query.search;
 
-        const cases = await this.db.getTestCases(filters);
-        res.json(cases);
+        const tasks = await this.db.getTasks(filters);
+        res.json(tasks);
       } catch (error) {
         res.status(500).json({ error: error.message });
       }
     });
 
-    this.app.post('/api/cases', async (req, res) => {
+    this.app.post('/api/tasks', async (req, res) => {
       try {
-        const { suite_id, description, priority = 'medium', category } = req.body;
+        const { project_id, description, priority = 'medium', category, assignee, due_date } = req.body;
 
-        if (!suite_id || !description) {
-          return res.status(400).json({ error: 'suite_id and description are required' });
+        if (!project_id || !description) {
+          return res.status(400).json({ error: 'project_id and description are required' });
         }
 
-        // Verify suite exists
-        const suite = await this.db.getTestSuite(suite_id);
-        if (!suite) {
-          return res.status(404).json({ error: 'Test suite not found' });
+        // Verify project exists
+        const project = await this.db.getProject(project_id);
+        if (!project) {
+          return res.status(404).json({ error: 'Project not found' });
         }
 
-        const id = await this.db.addTestCase(suite_id, description, priority, category);
+        const id = await this.db.addTask(project_id, description, priority, category, assignee, due_date);
         res.status(201).json({
           success: true,
           id,
-          message: 'Test case created successfully'
+          message: 'Task created successfully'
         });
       } catch (error) {
         res.status(500).json({ error: error.message });
       }
     });
 
-    this.app.put('/api/cases/:id', async (req, res) => {
+    this.app.put('/api/tasks/:id', async (req, res) => {
       try {
         const id = parseInt(req.params.id);
 
         if (isNaN(id)) {
-          return res.status(400).json({ error: 'Invalid case ID' });
+          return res.status(400).json({ error: 'Invalid task ID' });
         }
 
         const updates = {};
-        const allowedFields = ['status', 'notes', 'priority', 'category', 'description'];
+        const allowedFields = ['status', 'notes', 'priority', 'category', 'description', 'assignee', 'due_date'];
 
         for (const field of allowedFields) {
           if (req.body[field] !== undefined) {
@@ -231,61 +232,61 @@ class WebServer {
           return res.status(400).json({ error: 'No valid fields to update' });
         }
 
-        const success = await this.db.updateTestCase(id, updates);
+        const success = await this.db.updateTask(id, updates);
         if (success) {
           res.json({
             success: true,
-            message: 'Test case updated successfully'
+            message: 'Task updated successfully'
           });
         } else {
-          res.status(404).json({ error: 'Test case not found' });
+          res.status(404).json({ error: 'Task not found' });
         }
       } catch (error) {
         res.status(500).json({ error: error.message });
       }
     });
 
-    this.app.delete('/api/cases/:id', async (req, res) => {
+    this.app.delete('/api/tasks/:id', async (req, res) => {
       try {
         const id = parseInt(req.params.id);
 
         if (isNaN(id)) {
-          return res.status(400).json({ error: 'Invalid case ID' });
+          return res.status(400).json({ error: 'Invalid task ID' });
         }
 
-        const success = await this.db.deleteTestCase(id);
+        const success = await this.db.deleteTask(id);
         if (success) {
           res.json({
             success: true,
-            message: 'Test case deleted successfully'
+            message: 'Task deleted successfully'
           });
         } else {
-          res.status(404).json({ error: 'Test case not found' });
+          res.status(404).json({ error: 'Task not found' });
         }
       } catch (error) {
         res.status(500).json({ error: error.message });
       }
     });
 
-    // Test Summary
-    this.app.get('/api/summary/:suite_id', async (req, res) => {
+    // Project Summary
+    this.app.get('/api/summary/:project_id', async (req, res) => {
       try {
-        const suite_id = parseInt(req.params.suite_id);
+        const project_id = parseInt(req.params.project_id);
 
-        if (isNaN(suite_id)) {
-          return res.status(400).json({ error: 'Invalid suite ID' });
+        if (isNaN(project_id)) {
+          return res.status(400).json({ error: 'Invalid project ID' });
         }
 
-        // Verify suite exists
-        const suite = await this.db.getTestSuite(suite_id);
-        if (!suite) {
-          return res.status(404).json({ error: 'Test suite not found' });
+        // Verify project exists
+        const project = await this.db.getProject(project_id);
+        if (!project) {
+          return res.status(404).json({ error: 'Project not found' });
         }
 
-        const summary = await this.db.getTestSummary(suite_id);
+        const summary = await this.db.getProjectSummary(project_id);
         res.json({
-          suite_name: suite.name,
-          suite_id: suite_id,
+          project_name: project.name,
+          project_id,
           summary
         });
       } catch (error) {

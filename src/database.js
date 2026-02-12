@@ -84,47 +84,48 @@ class Database {
     });
   }
 
-  // Test Suite operations
-  async createTestSuite(name, project = null, description = null) {
+  // Project operations (formerly test_suites)
+  async createProject(name, client = null, description = null) {
     const sql = `
-      INSERT INTO test_suites (name, project, description, updated_at) 
+      INSERT INTO projects (name, client, description, updated_at) 
       VALUES (?, ?, ?, CURRENT_TIMESTAMP)
     `;
-    const result = await this.run(sql, [name, project, description]);
+    const result = await this.run(sql, [name, client, description]);
     return result.id;
   }
 
-  async getTestSuites(project = null) {
+  async getProjects(client = null) {
     let sql = `
-      SELECT ts.*, 
-             COUNT(tc.id) as total_cases,
-             COUNT(CASE WHEN tc.status = 'passed' THEN 1 END) as passed_cases,
-             COUNT(CASE WHEN tc.status = 'failed' THEN 1 END) as failed_cases,
-             COUNT(CASE WHEN tc.status = 'pending' THEN 1 END) as pending_cases,
-             COUNT(CASE WHEN tc.status = 'blocked' THEN 1 END) as blocked_cases,
-             COUNT(CASE WHEN tc.status = 'skipped' THEN 1 END) as skipped_cases
-      FROM test_suites ts 
-      LEFT JOIN test_cases tc ON ts.id = tc.suite_id
+      SELECT p.*, 
+             COUNT(t.id) as total_tasks,
+             COUNT(CASE WHEN t.status = 'pending' THEN 1 END) as pending_tasks,
+             COUNT(CASE WHEN t.status = 'in-progress' THEN 1 END) as in_progress_tasks,
+             COUNT(CASE WHEN t.status = 'developed' THEN 1 END) as developed_tasks,
+             COUNT(CASE WHEN t.status = 'tested' THEN 1 END) as tested_tasks,
+             COUNT(CASE WHEN t.status = 'deployed' THEN 1 END) as deployed_tasks,
+             COUNT(CASE WHEN t.status = 'blocked' THEN 1 END) as blocked_tasks
+      FROM projects p 
+      LEFT JOIN tasks t ON p.id = t.project_id
     `;
 
     const params = [];
-    if (project) {
-      sql += ' WHERE ts.project = ?';
-      params.push(project);
+    if (client) {
+      sql += ' WHERE p.client = ?';
+      params.push(client);
     }
 
-    sql += ' GROUP BY ts.id ORDER BY ts.updated_at DESC';
+    sql += ' GROUP BY p.id ORDER BY p.updated_at DESC';
 
     return await this.all(sql, params);
   }
 
-  async getTestSuite(id) {
-    const sql = 'SELECT * FROM test_suites WHERE id = ?';
+  async getProject(id) {
+    const sql = 'SELECT * FROM projects WHERE id = ?';
     return await this.get(sql, [id]);
   }
 
-  async updateTestSuite(id, updates = {}) {
-    const allowedFields = ['name', 'project', 'description'];
+  async updateProject(id, updates = {}) {
+    const allowedFields = ['name', 'client', 'description'];
     const setClause = [];
     const params = [];
 
@@ -142,33 +143,33 @@ class Database {
     setClause.push('updated_at = CURRENT_TIMESTAMP');
     params.push(id);
 
-    const sql = `UPDATE test_suites SET ${setClause.join(', ')} WHERE id = ?`;
+    const sql = `UPDATE projects SET ${setClause.join(', ')} WHERE id = ?`;
     const result = await this.run(sql, params);
     return result.changes > 0;
   }
 
-  async deleteTestSuite(id) {
-    const sql = 'DELETE FROM test_suites WHERE id = ?';
+  async deleteProject(id) {
+    const sql = 'DELETE FROM projects WHERE id = ?';
     const result = await this.run(sql, [id]);
     return result.changes > 0;
   }
 
-  // Test Case operations
-  async addTestCase(suiteId, description, priority = 'medium', category = null) {
+  // Task operations (formerly test_cases)
+  async addTask(projectId, description, priority = 'medium', category = null, assignee = null, dueDate = null) {
     const sql = `
-      INSERT INTO test_cases (suite_id, description, priority, category, updated_at) 
-      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+      INSERT INTO tasks (project_id, description, priority, category, assignee, due_date, updated_at) 
+      VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `;
-    const result = await this.run(sql, [suiteId, description, priority, category]);
+    const result = await this.run(sql, [projectId, description, priority, category, assignee, dueDate]);
 
-    // Update suite timestamp
-    await this.run('UPDATE test_suites SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [suiteId]);
+    // Update project timestamp
+    await this.run('UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [projectId]);
 
     return result.id;
   }
 
-  async updateTestCase(id, updates = {}) {
-    const allowedFields = ['status', 'notes', 'priority', 'category', 'description'];
+  async updateTask(id, updates = {}) {
+    const allowedFields = ['status', 'notes', 'priority', 'category', 'description', 'assignee', 'due_date'];
     const setClause = [];
     const params = [];
 
@@ -186,25 +187,25 @@ class Database {
     setClause.push('updated_at = CURRENT_TIMESTAMP');
     params.push(id);
 
-    const sql = `UPDATE test_cases SET ${setClause.join(', ')} WHERE id = ?`;
+    const sql = `UPDATE tasks SET ${setClause.join(', ')} WHERE id = ?`;
     const result = await this.run(sql, params);
 
-    // Update suite timestamp
-    const testCase = await this.get('SELECT suite_id FROM test_cases WHERE id = ?', [id]);
-    if (testCase) {
-      await this.run('UPDATE test_suites SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [testCase.suite_id]);
+    // Update project timestamp
+    const task = await this.get('SELECT project_id FROM tasks WHERE id = ?', [id]);
+    if (task) {
+      await this.run('UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [task.project_id]);
     }
 
     return result.changes > 0;
   }
 
-  async getTestCases(filters = {}) {
-    let sql = 'SELECT * FROM test_cases WHERE 1=1';
+  async getTasks(filters = {}) {
+    let sql = 'SELECT * FROM tasks WHERE 1=1';
     const params = [];
 
-    if (filters.suite_id) {
-      sql += ' AND suite_id = ?';
-      params.push(filters.suite_id);
+    if (filters.project_id) {
+      sql += ' AND project_id = ?';
+      params.push(filters.project_id);
     }
 
     if (filters.status) {
@@ -222,6 +223,11 @@ class Database {
       params.push(filters.category);
     }
 
+    if (filters.assignee) {
+      sql += ' AND assignee = ?';
+      params.push(filters.assignee);
+    }
+
     if (filters.search) {
       sql += ' AND (description LIKE ? OR notes LIKE ?)';
       const searchTerm = `%${filters.search}%`;
@@ -233,46 +239,62 @@ class Database {
     return await this.all(sql, params);
   }
 
-  async deleteTestCase(id) {
-    // Get suite_id before deletion
-    const testCase = await this.get('SELECT suite_id FROM test_cases WHERE id = ?', [id]);
+  async deleteTask(id) {
+    // Get project_id before deletion
+    const task = await this.get('SELECT project_id FROM tasks WHERE id = ?', [id]);
 
-    const sql = 'DELETE FROM test_cases WHERE id = ?';
+    const sql = 'DELETE FROM tasks WHERE id = ?';
     const result = await this.run(sql, [id]);
 
-    // Update suite timestamp if case was deleted
-    if (result.changes > 0 && testCase) {
-      await this.run('UPDATE test_suites SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [testCase.suite_id]);
+    // Update project timestamp if task was deleted
+    if (result.changes > 0 && task) {
+      await this.run('UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [task.project_id]);
     }
 
     return result.changes > 0;
   }
 
-  async getTestSummary(suiteId) {
+  async getProjectSummary(projectId) {
     const sql = `
       SELECT 
         COUNT(*) as total,
-        COUNT(CASE WHEN status = 'passed' THEN 1 END) as passed,
-        COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed,
         COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
+        COUNT(CASE WHEN status = 'in-progress' THEN 1 END) as in_progress,
+        COUNT(CASE WHEN status = 'developed' THEN 1 END) as developed,
+        COUNT(CASE WHEN status = 'tested' THEN 1 END) as tested,
+        COUNT(CASE WHEN status = 'deployed' THEN 1 END) as deployed,
         COUNT(CASE WHEN status = 'blocked' THEN 1 END) as blocked,
-        COUNT(CASE WHEN status = 'skipped' THEN 1 END) as skipped,
         COUNT(CASE WHEN priority = 'critical' THEN 1 END) as critical,
         COUNT(CASE WHEN priority = 'high' THEN 1 END) as high,
         COUNT(CASE WHEN priority = 'medium' THEN 1 END) as medium,
         COUNT(CASE WHEN priority = 'low' THEN 1 END) as low
-      FROM test_cases 
-      WHERE suite_id = ?
+      FROM tasks 
+      WHERE project_id = ?
     `;
 
-    const summary = await this.get(sql, [suiteId]);
+    const summary = await this.get(sql, [projectId]);
 
-    // Calculate completion percentage
-    const completed = summary.passed + summary.failed + summary.skipped;
-    summary.completion_percentage = summary.total > 0 ? Math.round((completed / summary.total) * 100) : 0;
-    summary.pass_percentage = summary.total > 0 ? Math.round((summary.passed / summary.total) * 100) : 0;
+    // Calculate completion percentage (deployed = completed)
+    summary.completion_percentage = summary.total > 0 ? Math.round((summary.deployed / summary.total) * 100) : 0;
+    summary.progress_percentage = summary.total > 0 ? Math.round(((summary.developed + summary.tested + summary.deployed) / summary.total) * 100) : 0;
 
     return summary;
+  }
+
+  // Get unique assignees for filtering
+  async getAssignees(projectId = null) {
+    let sql = 'SELECT DISTINCT assignee FROM tasks WHERE assignee IS NOT NULL AND assignee != ""';
+    const params = [];
+
+    if (projectId) {
+      sql += ' AND project_id = ?';
+      params.push(projectId);
+    }
+
+    sql += ' ORDER BY assignee';
+
+    const rows = await this.all(sql, params);
+    return rows.map(row => row.assignee);
   }
 
   close() {

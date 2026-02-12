@@ -12,20 +12,18 @@ describe('Database', () => {
   const testDbPath = join(__dirname, '..', 'test-database.db');
 
   beforeEach(async () => {
-    // Create a fresh database for each test
     db = new Database(testDbPath);
     await db.ready;
   });
 
   afterEach(async () => {
-    // Close database connection and clean up
     if (db && db.db) {
       await new Promise((resolve) => {
         db.db.close(() => {
           try {
             unlinkSync(testDbPath);
           } catch (e) {
-            // Ignore if file doesn't exist
+            // ignore missing file
           }
           resolve();
         });
@@ -33,163 +31,158 @@ describe('Database', () => {
     }
   });
 
-  describe('Test Suite Operations', () => {
-    test('should create a test suite', async () => {
-      const suiteId = await db.createTestSuite('Login Tests', 'MyApp', 'Tests for login functionality');
-      expect(suiteId).toBeGreaterThan(0);
+  describe('Project Operations', () => {
+    test('should create a project', async () => {
+      const projectId = await db.createProject('Portal Web', 'Acme', 'Proyecto principal');
+      expect(projectId).toBeGreaterThan(0);
     });
 
-    test('should get all test suites', async () => {
-      await db.createTestSuite('Login Tests', 'MyApp');
-      await db.createTestSuite('Signup Tests', 'MyApp');
+    test('should get all projects', async () => {
+      await db.createProject('Portal Web', 'Acme');
+      await db.createProject('API Interna', 'Acme');
 
-      const suites = await db.getTestSuites();
-      expect(suites.length).toBe(2);
-      expect(suites[0].name).toBe('Login Tests');
-      expect(suites[1].name).toBe('Signup Tests');
+      const projects = await db.getProjects();
+      expect(projects.length).toBe(2);
+      expect(projects[0].name).toBe('Portal Web');
+      expect(projects[1].name).toBe('API Interna');
     });
 
-    test('should filter test suites by project', async () => {
-      await db.createTestSuite('Login Tests', 'Project A');
-      await db.createTestSuite('Signup Tests', 'Project B');
+    test('should filter projects by client', async () => {
+      await db.createProject('Portal Web', 'Client A');
+      await db.createProject('API Interna', 'Client B');
 
-      const suites = await db.getTestSuites('Project A');
-      expect(suites.length).toBe(1);
-      expect(suites[0].project).toBe('Project A');
+      const projects = await db.getProjects('Client A');
+      expect(projects.length).toBe(1);
+      expect(projects[0].client).toBe('Client A');
     });
 
-    test('should get a specific test suite by id', async () => {
-      const suiteId = await db.createTestSuite('Login Tests', 'MyApp');
+    test('should update a project', async () => {
+      const projectId = await db.createProject('Portal Web', 'Acme');
+      await db.updateProject(projectId, { name: 'Portal Web v2', client: 'Globex' });
 
-      const suite = await db.getTestSuite(suiteId);
-      expect(suite).toBeDefined();
-      expect(suite.id).toBe(suiteId);
-      expect(suite.name).toBe('Login Tests');
+      const project = await db.getProject(projectId);
+      expect(project.name).toBe('Portal Web v2');
+      expect(project.client).toBe('Globex');
     });
 
-    test('should update a test suite', async () => {
-      const suiteId = await db.createTestSuite('Login Tests', 'MyApp');
+    test('should delete a project', async () => {
+      const projectId = await db.createProject('Portal Web', 'Acme');
+      await db.deleteProject(projectId);
 
-      await db.updateTestSuite(suiteId, { name: 'Updated Login Tests', project: 'NewApp' });
-
-      const suite = await db.getTestSuite(suiteId);
-      expect(suite.name).toBe('Updated Login Tests');
-      expect(suite.project).toBe('NewApp');
-    });
-
-    test('should delete a test suite', async () => {
-      const suiteId = await db.createTestSuite('Login Tests', 'MyApp');
-
-      await db.deleteTestSuite(suiteId);
-
-      const suite = await db.getTestSuite(suiteId);
-      expect(suite).toBeUndefined();
+      const project = await db.getProject(projectId);
+      expect(project).toBeUndefined();
     });
   });
 
-  describe('Test Case Operations', () => {
-    let suiteId;
+  describe('Task Operations', () => {
+    let projectId;
 
     beforeEach(async () => {
-      suiteId = await db.createTestSuite('Login Tests', 'MyApp');
+      projectId = await db.createProject('Portal Web', 'Acme');
     });
 
-    test('should add a test case', async () => {
-      const caseId = await db.addTestCase(
-        suiteId,
-        'Verify login with valid credentials',
+    test('should add a task', async () => {
+      const taskId = await db.addTask(
+        projectId,
+        'Implementar login',
         'high',
-        'Authentication'
+        'Backend',
+        'Juan',
+        '2026-02-28'
       );
-      expect(caseId).toBeGreaterThan(0);
+
+      expect(taskId).toBeGreaterThan(0);
     });
 
-    test('should get all test cases for a suite', async () => {
-      await db.addTestCase(suiteId, 'Test 1', 'high');
-      await db.addTestCase(suiteId, 'Test 2', 'medium');
+    test('should get all tasks for a project', async () => {
+      await db.addTask(projectId, 'Task 1', 'high');
+      await db.addTask(projectId, 'Task 2', 'medium');
 
-      const cases = await db.getTestCases({ suite_id: suiteId });
-      expect(cases.length).toBe(2);
-      // Cases are returned in DESC order by created_at
-      expect(cases[0].description).toBe('Test 1');
-      expect(cases[1].description).toBe('Test 2');
+      const tasks = await db.getTasks({ project_id: projectId });
+      expect(tasks.length).toBe(2);
     });
 
-    test('should filter test cases by status', async () => {
-      const id1 = await db.addTestCase(suiteId, 'Test 1', 'high');
-      const id2 = await db.addTestCase(suiteId, 'Test 2', 'medium');
-      const id3 = await db.addTestCase(suiteId, 'Test 3', 'high');
+    test('should filter tasks by status', async () => {
+      const id1 = await db.addTask(projectId, 'Task 1', 'high');
+      const id2 = await db.addTask(projectId, 'Task 2', 'medium');
+      const id3 = await db.addTask(projectId, 'Task 3', 'high');
 
-      await db.updateTestCase(id1, { status: 'passed' });
-      await db.updateTestCase(id2, { status: 'failed' });
-      await db.updateTestCase(id3, { status: 'passed' });
+      await db.updateTask(id1, { status: 'developed' });
+      await db.updateTask(id2, { status: 'blocked' });
+      await db.updateTask(id3, { status: 'developed' });
 
-      const passedCases = await db.getTestCases({ suite_id: suiteId, status: 'passed' });
-      expect(passedCases.length).toBe(2);
-      expect(passedCases.every(c => c.status === 'passed')).toBe(true);
+      const developedTasks = await db.getTasks({ project_id: projectId, status: 'developed' });
+      expect(developedTasks.length).toBe(2);
+      expect(developedTasks.every((task) => task.status === 'developed')).toBe(true);
     });
 
-    test('should update a test case', async () => {
-      const caseId = await db.addTestCase(suiteId, 'Test 1', 'high');
+    test('should update a task', async () => {
+      const taskId = await db.addTask(projectId, 'Task 1', 'high');
+      await db.updateTask(taskId, {
+        status: 'tested',
+        notes: 'Validado por QA',
+        assignee: 'Maria',
+        due_date: '2026-03-10'
+      });
 
-      await db.updateTestCase(caseId, { status: 'passed', notes: 'All good!' });
-
-      const testCase = await db.get('SELECT * FROM test_cases WHERE id = ?', [caseId]);
-      expect(testCase.status).toBe('passed');
-      expect(testCase.notes).toBe('All good!');
+      const task = await db.get('SELECT * FROM tasks WHERE id = ?', [taskId]);
+      expect(task.status).toBe('tested');
+      expect(task.notes).toBe('Validado por QA');
+      expect(task.assignee).toBe('Maria');
+      expect(task.due_date).toBe('2026-03-10');
     });
 
-    test('should delete a test case', async () => {
-      const caseId = await db.addTestCase(suiteId, 'Test 1', 'high');
+    test('should delete a task', async () => {
+      const taskId = await db.addTask(projectId, 'Task 1', 'high');
+      await db.deleteTask(taskId);
 
-      await db.deleteTestCase(caseId);
-
-      const testCase = await db.get('SELECT * FROM test_cases WHERE id = ?', [caseId]);
-      expect(testCase).toBeUndefined();
+      const task = await db.get('SELECT * FROM tasks WHERE id = ?', [taskId]);
+      expect(task).toBeUndefined();
     });
   });
 
   describe('Statistics', () => {
-    test('should calculate suite statistics correctly', async () => {
-      const suiteId = await db.createTestSuite('Login Tests', 'MyApp');
+    test('should calculate project statistics correctly', async () => {
+      const projectId = await db.createProject('Portal Web', 'Acme');
 
-      const id1 = await db.addTestCase(suiteId, 'Test 1', 'high');
-      const id2 = await db.addTestCase(suiteId, 'Test 2', 'medium');
-      const id3 = await db.addTestCase(suiteId, 'Test 3', 'low');
-      const id4 = await db.addTestCase(suiteId, 'Test 4', 'high');
+      const id1 = await db.addTask(projectId, 'Task 1', 'high');
+      const id2 = await db.addTask(projectId, 'Task 2', 'medium');
+      const id3 = await db.addTask(projectId, 'Task 3', 'low');
+      const id4 = await db.addTask(projectId, 'Task 4', 'critical');
 
-      await db.updateTestCase(id1, { status: 'passed' });
-      await db.updateTestCase(id2, { status: 'passed' });
-      await db.updateTestCase(id3, { status: 'failed' });
-      // id4 stays as pending
+      await db.updateTask(id1, { status: 'in-progress' });
+      await db.updateTask(id2, { status: 'developed' });
+      await db.updateTask(id3, { status: 'deployed' });
+      await db.updateTask(id4, { status: 'blocked' });
 
-      const suites = await db.getTestSuites();
-      const suite = suites.find(s => s.id === suiteId);
+      const projects = await db.getProjects();
+      const project = projects.find((item) => item.id === projectId);
 
-      expect(suite.total_cases).toBe(4);
-      expect(suite.passed_cases).toBe(2);
-      expect(suite.failed_cases).toBe(1);
-      expect(suite.pending_cases).toBe(1);
+      expect(project.total_tasks).toBe(4);
+      expect(project.in_progress_tasks).toBe(1);
+      expect(project.developed_tasks).toBe(1);
+      expect(project.deployed_tasks).toBe(1);
+      expect(project.blocked_tasks).toBe(1);
     });
 
-    test('should get test summary for a suite', async () => {
-      const suiteId = await db.createTestSuite('Login Tests', 'MyApp');
+    test('should get project summary', async () => {
+      const projectId = await db.createProject('Portal Web', 'Acme');
 
-      const id1 = await db.addTestCase(suiteId, 'Test 1', 'high');
-      const id2 = await db.addTestCase(suiteId, 'Test 2', 'critical');
+      const id1 = await db.addTask(projectId, 'Task 1', 'high');
+      const id2 = await db.addTask(projectId, 'Task 2', 'critical');
 
-      await db.updateTestCase(id1, { status: 'passed' });
-      await db.updateTestCase(id2, { status: 'failed' });
+      await db.updateTask(id1, { status: 'deployed' });
+      await db.updateTask(id2, { status: 'tested' });
 
-      const summary = await db.getTestSummary(suiteId);
+      const summary = await db.getProjectSummary(projectId);
 
       expect(summary.total).toBe(2);
-      expect(summary.passed).toBe(1);
-      expect(summary.failed).toBe(1);
+      expect(summary.deployed).toBe(1);
+      expect(summary.tested).toBe(1);
       expect(summary.critical).toBe(1);
       expect(summary.high).toBe(1);
-      expect(summary.completion_percentage).toBe(100);
-      expect(summary.pass_percentage).toBe(50);
+      expect(summary.completion_percentage).toBe(50);
+      expect(summary.progress_percentage).toBe(100);
     });
   });
 });
